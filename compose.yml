@@ -1,0 +1,136 @@
+version: "3.8"
+
+services:
+# frontend network for proxy server
+  nginx-proxy:
+    image: nginx
+    container_name: nginx-proxy
+    ports:
+      - 80
+    restart: unless-stopped
+    volumes:
+      - ./nginx/config:/etc/nginx/conf.d
+    networks: 
+      front-lan:
+        ipv4_address: 172.18.0.1
+      back-lan-a:
+        ipv4_address: 172.19.0.1
+      back-lan-b:
+        ipv4_address: 172.20.0.1
+
+# backend  network for A project
+  nginx-a:
+    image: nginx
+    container_name: nginx-a
+    ports:
+      - 80
+    restart: unless-stopped
+    volumes:
+      - ./nginx-a:/etc/nginx/conf.d
+      - ./www/a:/var/www
+    networks: 
+      back-lan-a:
+        ipv4_address: 172.19.0.2
+  php-fpm-a:
+    image: php:7.4-fpm
+    container_name: php-fpm-a
+    restart: unless-stopped
+    working_dir: /var/www
+    ports: 
+      - 9000
+    volumes:
+      - ./www/a:/var/www
+    networks: 
+      back-lan-a:
+        ipv4_address: 172.19.0.3
+  db-a:
+    image: mysql
+    container_name: db-a
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    ports:
+      - 3306
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+    networks:
+      back-lan-a:
+        ipv4_address: 172.19.0.4
+  redis-a:
+    image: redis
+    container_name: redis-a
+    ports:
+      - 6379
+    networks: 
+      back-lan-a:
+        ipv4_address: 172.19.0.5
+
+# backend network for B project
+  nginx-b:
+    image: nginx
+    container_name: nginx-b
+    ports:
+      - 80
+    restart: unless-stopped
+    volumes:
+      - ./nginx-b:/etc/nginx/conf.d
+      - ./www/b:/var/www
+    networks: 
+      back-lan-b:
+        ipv4_address: 172.20.0.2
+  php-fpm-b:
+    image: php:7.4-fpm
+    container_name: php-fpm-b
+    restart: unless-stopped
+    working_dir: /var/www
+    ports: 
+      - 9000
+    volumes:
+      - ./www/b:/var/www
+    networks: 
+      back-lan-b:
+        ipv4_address: 172.20.0.3
+  db-b:
+    image: mysql
+    container_name: db-b
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    ports:
+      - 3306
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+    networks:
+      back-lan-b:
+        ipv4_address: 172.20.0.4
+  redis-b:
+    image: redis
+    container_name: redis-b
+    ports:
+      - 6379
+    networks: 
+      back-lan-b:
+        ipv4_address: 172.20.0.5
+
+# Creates and describes all needed networks
+networks:
+  front-lan:
+    name: front-lan
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.18.0.0/24
+          gateway: 172.18.0.10
+
+  back-lan-a:
+    name: back-lan-a
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/24
+          gateway: 172.19.0.10
+  back-lan-b:
+    name: back-lan-b
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.10
